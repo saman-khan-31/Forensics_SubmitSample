@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Allowed Variance Filter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            gap: 40px;
+        }
+        .form-container {
+            width: 25%;
+            margin-right: 20px;
+        }
+        .right-container {
+            width: 70%;
+            margin-left: auto;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 10px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+        }
+        label {
+            font-weight: bold;
+        }
+        input, select, button {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: 
+            #088454;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: 
+            #088454;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: 
+            #088454;
+            color: white;
+        }
+        .section-heading {
+            font-size: 26px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .slider-container {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        .dynamic-text {
+            text-align: justify;
+            margin-top: 10px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .dynamic-text .highlight {
+            color: #d23d07; /* Highlight color for numbers */
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Submit New Sample</h1>
+    <div class="container">
+        <!-- Form Section -->
+        <div class="form-container">
+            <form id="sample-form">
+                <label for="file-upload">Select Excel File:</label>
+                <input type="file" id="file-upload" name="file-upload" accept=".xlsx, .xls" required>
+
+                <label for="sample-id">Sample ID:</label>
+                <input type="text" id="sample-id" name="sample-id" placeholder="Enter Sample ID" required>
+
+                <label for="drug-type">Drug Type:</label>
+                <select id="drug-type" name="drug-type" required>
+                    <option value="">-- Select Drug Type --</option>
+                    <option value="Cocaine">Cocaine</option>
+                    <option value="Heroin">Heroin</option>
+                    <option value="Methamphetamine">Methamphetamine</option>
+                </select>
+
+                <button type="button" onclick="processForm()">Submit</button>
+            </form>
+        </div>
+
+        <!-- Right Section -->
+        <div class="right-container">
+            <!-- Uploaded Sample -->
+            <div id="user-table-container" style="display: none;">
+                <div class="section-heading">Uploaded Sample:</div>
+                
+                <!-- Dynamic Text -->
+                <div id="dynamic-text-container" class="dynamic-text" style="display: none;"></div>
+
+                <table id="user-table">
+                    <thead>
+                        <tr>
+                            <th>Sample ID</th>
+                            <th>Drug Type</th>
+                            <th>Retention Time</th>
+                            <th>Maximum Abundance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body"></tbody>
+                </table>
+            </div>
+
+            <br>
+            <!-- Matches Found Heading -->
+            <div class="section-heading" id="matches-heading" style="display: none;">
+                Matches Found: <span id="matches-count">0</span>
+            </div>
+
+        
+            <!-- Slider Section -->
+            <div class="slider-container" id="slider-container" style="display: none;">
+                <p style="text-align: justify; line-height: 1.5;">Below are the matching samples with close retention times to the uploaded sample. By adjusting the slider, 
+                the samples with a difference in retention time within the allowed variance (±) will be filtered and displayed.</p>
+                <label for="allowed-variance">Allowed Variance:</label>
+                <input type="range" id="allowed-variance" min="0" max="2" step="0.1" value="0.1" oninput="updateVarianceLabel()" onchange="filterTable()">
+                <p>Current Variance: <span id="variance-value">0.1</span></p>
+            </div>
+
+            <!-- Filtered Table -->
+            <table id="result-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Sample ID</th>
+                        <th>Date Acquired</th>
+                        <th>Drug Type</th>
+                        <th>Retention Time</th>
+                        <th>Maximum Abundance</th>
+                    </tr>
+                </thead>
+                <tbody id="result-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        const tableData = [
+    { SampleID: 'S1', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '107595-22-S1.D', DateAcquired: '04/28/2022 01:35:00 PM', TIC: '107595-22-S1.D\\data.ms', RetentionTime: 16.441, MaxAbundance: 39398596, Instrument: 'GCMS-1', VialNumber: 61, LatitudeAcquired: 25.2465, LongitudeAcquired: 55.3200, SourceID: 'SRC6384', SourceStatus: 'Banned from Country' },
+    { SampleID: 'S2', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '156396-22-C-S1.D', DateAcquired: '12/16/2022 07:34:00 PM', TIC: '156396-22-C-S1.D\\data.ms', RetentionTime: 15.72, MaxAbundance: 150864944, Instrument: 'GCMS-2', VialNumber: 34, LatitudeAcquired: 25.2760, LongitudeAcquired: 55.3230, SourceID: 'Unknown', SourceStatus: 'Unknown' },
+    { SampleID: 'S3', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '88246-2022.D', DateAcquired: '02/21/2022 02:49:00 PM', TIC: '88246-2022.D\\data.ms', RetentionTime: 16.211, MaxAbundance: 11632325, Instrument: 'GCMS-2', VialNumber: 24, LatitudeAcquired: 25.2340, LongitudeAcquired: 55.3150, SourceID: 'Unknown', SourceStatus: 'Unknown' },
+    { SampleID: 'S4', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '152383-22-S1.D', DateAcquired: '04/11/2022 02:26:00 PM', TIC: '152383-22-S1.D\\data.ms', RetentionTime: 15.463, MaxAbundance: 25371720, Instrument: 'GCMS-3', VialNumber: 3, LatitudeAcquired: 25.2295, LongitudeAcquired: 55.3273, SourceID: 'SRC1023', SourceStatus: 'Legitimate Legal Source' },
+    { SampleID: 'S5', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '139301-22-S1.D', DateAcquired: '01/09/2022 03:18:00 PM', TIC: '139301-22-S1.D\\data.ms', RetentionTime: 15.149, MaxAbundance: 3080717, Instrument: 'GCMS-8', VialNumber: 7, LatitudeAcquired: 25.0935, LongitudeAcquired: 55.1850, SourceID: 'Unknown', SourceStatus: 'Unknown' },
+    { SampleID: 'S6', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '107596-22-S1.D', DateAcquired: '05/29/2022 07:35:00 PM', TIC: '107596-22-S1.D\\data.ms', RetentionTime: 16.444, MaxAbundance: 39398596, Instrument: 'GCMS-4', VialNumber: 25, LatitudeAcquired: 25.2900, LongitudeAcquired: 55.3910, SourceID: 'SRC6384', SourceStatus: 'Banned from Country' },
+    { SampleID: 'S7', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '193383-22-S1.D', DateAcquired: '12/30/2022 08:13:00 PM', TIC: '193383-22-S1.D\\data.ms', RetentionTime: 15.92, MaxAbundance: 458923852, Instrument: 'GCMS-3', VialNumber: 15, LatitudeAcquired: 25.2810, LongitudeAcquired: 55.3660, SourceID: 'Unknown', SourceStatus: 'Unknown' },
+    { SampleID: 'S8', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '837428-2022.D', DateAcquired: '05/31/2022 12:00:00 PM', TIC: '837428-2022.D\\data.ms', RetentionTime: 16.455, MaxAbundance: 32857482, Instrument: 'GCMS-2', VialNumber: 32, LatitudeAcquired: 25.1110, LongitudeAcquired: 55.2000, SourceID: 'SRC6384', SourceStatus: 'Banned from Country' },
+    { SampleID: 'S9', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '3273952-22-S1.D', DateAcquired: '01/20/2022 09:20:00 PM', TIC: '3273952-22-S1.D\\data.ms', RetentionTime: 15.457, MaxAbundance: 57296846, Instrument: 'GCMS-8', VialNumber: 2, LatitudeAcquired: 25.2520, LongitudeAcquired: 55.3650, SourceID: 'SRC1023', SourceStatus: 'Legitimate Legal Source' },
+    { SampleID: 'S10', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '8573729-22-S1.D', DateAcquired: '01/07/2022 08:34:00 PM', TIC: '8573729-22-S1.D\\data.ms', RetentionTime: 15.423, MaxAbundance: 113748525, Instrument: 'GCMS-2', VialNumber: 18, LatitudeAcquired: 25.1170, LongitudeAcquired: 55.2000, SourceID: 'SRC1023', SourceStatus: 'Legitimate Legal Source' },
+    { SampleID: 'S11', ID: 'Heroin', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '48383729-22-S1.D', DateAcquired: '04/22/2022 08:26:00 PM', TIC: '48383729-22-S1.D\\data.ms', RetentionTime: 20.132, MaxAbundance: 869472714, Instrument: 'GCMS-8', VialNumber: 17, LatitudeAcquired: 25.1850, LongitudeAcquired: 55.2500, SourceID: 'SRC9999', SourceStatus: 'Under Investigation' },
+    { SampleID: 'S12', ID: 'Heroin', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '546383-22-S1.D', DateAcquired: '03/15/2022 04:49:00 PM', TIC: '546383-22-S1.D\\data.ms', RetentionTime: 21.967, MaxAbundance: 294958194, Instrument: 'GCMS-2', VialNumber: 12, LatitudeAcquired: 25.1990, LongitudeAcquired: 55.2530, SourceID: 'SRC6384', SourceStatus: 'Banned from Country' },
+    { SampleID: 'S13', ID: 'Heroin', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '58573729-22-C-S1.D', DateAcquired: '05/20/2022 04:20:00 PM', TIC: '58573729-22-C-S1.D\\data.ms', RetentionTime: 20.136, MaxAbundance: 973718485, Instrument: 'GCMS-8', VialNumber: 9, LatitudeAcquired: 25.2710, LongitudeAcquired: 55.3300, SourceID: 'SRC9999', SourceStatus: 'Under Investigation' },
+    { SampleID: 'S14', ID: 'Heroin', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '558827-2022.D', DateAcquired: '04/03/2022 07:59:00 PM', TIC: '558827-2022.D\\data.ms', RetentionTime: 20.142, MaxAbundance: 1253547582, Instrument: 'GCMS-1', VialNumber: 13, LatitudeAcquired: 25.2500, LongitudeAcquired: 55.3000, SourceID: 'SRC9999', SourceStatus: 'Under Investigation' },
+    { SampleID: 'S15', ID: 'Heroin', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '1958671-22-S1.D', DateAcquired: '08/11/2022 06:39:00 PM', TIC: '1958671-22-S1.D\\data.ms', RetentionTime: 20.563, MaxAbundance: 8883747569, Instrument: 'GCMS-1', VialNumber: 14, LatitudeAcquired: 25.2700, LongitudeAcquired: 55.3300, SourceID: 'Unknown', SourceStatus: 'Unknown' },
+    { SampleID: 'S16', ID: 'Methamphetamine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '45826-22-C-S1.D', DateAcquired: '09/18/2022 04:26:00 PM', TIC: '45826-22-C-S1.D\\data.ms', RetentionTime: 10.934, MaxAbundance: 86927247692, Instrument: 'GCMS-1', VialNumber: 24, LatitudeAcquired: 25.2300, LongitudeAcquired: 55.3200, SourceID: 'SRC1111', SourceStatus: 'Banned from Country' },
+    { SampleID: 'S17', ID: 'Methamphetamine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '1558333-22-S1.D', DateAcquired: '05/31/2022 06:00:00 PM', TIC: '1558333-22-S1.D\\data.ms', RetentionTime: 11.867, MaxAbundance: 637288582, Instrument: 'GCMS-3', VialNumber: 22, LatitudeAcquired: 25.2400, LongitudeAcquired: 55.3400, SourceID: 'Unknown', SourceStatus: 'Unknown' },
+    { SampleID: 'S18', ID: 'Methamphetamine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '594982-2022.D', DateAcquired: '08/23/2022 07:11:00 AM', TIC: '594982-2022.D\\data.ms', RetentionTime: 10.921, MaxAbundance: 1234958295, Instrument: 'GCMS-3', VialNumber: 1, LatitudeAcquired: 25.2200, LongitudeAcquired: 55.2700, SourceID: 'SRC1111', SourceStatus: 'Banned from Country' },
+    { SampleID: 'S19', ID: 'Methamphetamine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '987346-2022.D', DateAcquired: '10/22/2022 07:26:00 PM', TIC: '987346-2022.D\\data.ms', RetentionTime: 11.572, MaxAbundance: 43285729384, Instrument: 'GCMS-3', VialNumber: 8, LatitudeAcquired: 25.2500, LongitudeAcquired: 55.2700, SourceID: 'SRC6384', SourceStatus: 'Banned from Country' },
+    { SampleID: 'S20', ID: 'Methamphetamine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '197868-22-S1.D', DateAcquired: '09/30/2022 08:26:00 PM', TIC: '197868-22-S1.D\\data.ms', RetentionTime: 10.822, MaxAbundance: 76463837587, Instrument: 'GCMS-2', VialNumber: 43, LatitudeAcquired: 25.2700, LongitudeAcquired: 55.3200, SourceID: 'SRC1111', SourceStatus: 'Banned from Country' }
+];
+
+
+        let userRetentionTime = null;
+        let selectedDrugType = null;
+
+        function processForm() {
+            const sampleId = document.getElementById('sample-id').value;
+            selectedDrugType = document.getElementById('drug-type').value;
+
+            if (!selectedDrugType || !sampleId) {
+                alert('Please fill in all fields.');
+                return;
+            }
+
+            userRetentionTime = parseFloat(tableData[0].RetentionTime); // Example
+            updateDynamicText(sampleId, 10, tableData[0].MaxAbundance, tableData[0].RetentionTime);
+            updateUserTable();
+            document.getElementById('slider-container').style.display = 'block';
+            document.getElementById('matches-heading').style.display = 'block';
+            filterTable();
+        }
+
+        function updateDynamicText(sampleId, rowCount, maxAbundance, retentionTime) {
+            const dynamicTextContainer = document.getElementById('dynamic-text-container');
+            dynamicTextContainer.innerHTML = `
+                Sample <span class="highlight">${sampleId}</span> contained <span class="highlight">4676 rows</span> of data,
+                from which a maximum abundance of <span class="highlight">${maxAbundance}</span> was retrieved,
+                this is the total intensity of a detected substance in forensics drug testing. 
+                A retention time of <span class="highlight">${retentionTime.toFixed(3)}</span> was found,
+                which is the time it takes for a compound to travel through the chromatography column.
+            `;
+            dynamicTextContainer.style.display = 'block';
+        }
+
+        function updateUserTable() {
+            const tbody = document.getElementById('user-table-body');
+            tbody.innerHTML = `
+                <tr>
+                    <td>S21</td>
+                    <td>${tableData[0].ID}</td>
+                    <td>${tableData[0].RetentionTime}</td>
+                    <td>${tableData[0].MaxAbundance}</td>
+                </tr>
+            `;
+            document.getElementById('user-table-container').style.display = 'block';
+        }
+
+        function updateVarianceLabel() {
+            const slider = document.getElementById('allowed-variance');
+            document.getElementById('variance-value').innerText = slider.value;
+        }
+
+        function filterTable() {
+            const variance = parseFloat(document.getElementById('allowed-variance').value);
+            const tbody = document.getElementById('result-body');
+            const table = document.getElementById('result-table');
+
+            tbody.innerHTML = '';
+            const filteredData = tableData.filter(row =>
+                row.ID === selectedDrugType &&
+                Math.abs(row.RetentionTime - userRetentionTime) <= variance
+            );
+
+            document.getElementById('matches-count').innerText = filteredData.length;
+
+            filteredData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.SampleID}</td>
+                    <td>${row.DateAcquired}</td>
+                    <td>${row.ID}</td>
+                    <td>${row.RetentionTime}</td>
+                    <td>${row.MaxAbundance}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            table.style.display = filteredData.length ? 'table' : 'none';
+        }
+    </script>
+</body>
+</html>
