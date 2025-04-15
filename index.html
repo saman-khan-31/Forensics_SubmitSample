@@ -1,278 +1,2324 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Allowed Variance Filter</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Submit New Samples</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
-            background-color: #f9f9f9;
-        }
-        h1 {
-            text-align: center;
-        }
-        .container {
-            display: flex;
-            gap: 40px;
-        }
-        .form-container {
-            width: 25%;
-            margin-right: 20px;
-        }
-        .right-container {
-            width: 70%;
-            margin-left: auto;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            padding: 10px;
-            background-color: #ffffff;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-        }
-        label {
-            font-weight: bold;
-        }
-        input, select, button {
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        button {
-            background-color: 
-            #088454;
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+
+      .chart-area {
+        width: 100%;
+        padding: 20px;
+        min-height: 600px; /* ✅ Set minimum height */
+        box-sizing: border-box;
+      }
+
+      h1 {
+        text-align: center;
+        margin-top: 20px;
+      }
+
+      .container {
+        display: flex;
+        margin-top: 30px;
+        padding: 0 20px;
+      }
+
+      .sidebar {
+        width: 30%;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-right: 1px solid #ccc;
+      }
+
+      .result-area {
+        width: 70%;
+        padding: 20px;
+      }
+
+      .section {
+        margin-bottom: 20px;
+      }
+
+      .error-message {
+        color: #d9534f;
+        font-weight: bold;
+        margin-top: 10px;
+        display: none;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        cursor: pointer;
+      }
+
+      table,
+      th,
+      td {
+        border: 1px solid #ccc;
+      }
+
+      th,
+      td {
+        padding: 8px;
+        text-align: center;
+      }
+
+      th {
+        background-color: #f2f2f2;
+      }
+
+      canvas {
+        margin-top: 20px;
+        height: 300px !important;
+        width: 100% !important;
+        background-color: white;
+      }
+
+      button {
+        padding: 10px 20px;
+        background-color: #018657;
+        color: white;
+        border: none;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+
+      button:hover {
+        background-color: #018657;
+      }
+
+      .drug-pill {
+        padding: 8px 16px;
+        border-radius: 10px;
+        background-color: #e0e0e0;
+        font-weight: bold;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.2s ease;
+      }
+
+      .drug-pill.active {
+        background-color: #018657;
+        color: white;
+      }
+
+      .selected-sample-row {
+        background-color: #d4edda !important; /* light green */
+      }
+
+      .sidebar,
+      .result-area,
+      .sum,
+      .second,
+      .third,
+      .matching-section {
+        padding: 6px 14px;
+        border-radius: 15px;
+        background-color: rgba(238, 238, 238, 0.6);
+        border: 1px solid #ccc;
+      }
+
+      .sidebar,
+      .sum {
+        margin-right: 25px;
+      }
+
+      #peaks-table th {
+        position: sticky;
+        top: 0;
+        background-color: #018657; /* Same green */
+        color: white;
+        z-index: 2; /* Make sure it stays above rows */
+      }
+
+      .tab {
+        background-color: white;
+      }
+
+      th {
+        background-color: #018657;
+        color: white;
+      }
+
+      .mode-pill {
+        padding: 6px 14px;
+        border-radius: 15px;
+        background-color: #eee;
+        font-weight: bold;
+        cursor: pointer;
+        user-select: none;
+        border: 1px solid #ccc;
+      }
+      .mode-pill.active {
+        background-color: #018657;
+        color: white;
+        border: 1px solid #018657;
+      }
+
+      #peaksChart {
+        height: 400px !important; /* or whatever looks best */
+        width: 100% !important;
+      }
+
+      #language-toggle div {
+        transition: background-color 0.3s, color 0.3s;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Submit New Samples</h1>
+    <div
+      style="
+        text-align: right;
+        padding: 10px 20px;
+        z-index: 9999;
+        position: relative;
+      "
+    >
+      <div
+        id="language-toggle"
+        style="
+          display: inline-flex;
+          border: 1px solid #ccc;
+          border-radius: 8px;
+          overflow: hidden;
+        "
+      >
+        <div
+          id="en-btn"
+          onclick="setLanguage('en')"
+          style="
+            padding: 8px 16px;
+            background-color: #018657;
             color: white;
             cursor: pointer;
-        }
-        button:hover {
-            background-color: 
-            #088454;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-        }
-        th {
-            background-color: 
-            #088454;
-            color: white;
-        }
-        .section-heading {
-            font-size: 26px;
-            font-weight: bold;
-            margin-top: 20px;
-        }
-        .slider-container {
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
-        .dynamic-text {
-            text-align: justify;
-            margin-top: 10px;
-            font-size: 16px;
-            line-height: 1.5;
-        }
-        .dynamic-text .highlight {
-            color: #d23d07; /* Highlight color for numbers */
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <h1>Submit New Sample</h1>
-    <div class="container">
-        <!-- Form Section -->
-        <div class="form-container">
-            <form id="sample-form">
-                <label for="file-upload">Select Excel File:</label>
-                <input type="file" id="file-upload" name="file-upload" accept=".xlsx, .xls" required>
-
-                <label for="sample-id">Sample ID:</label>
-                <input type="text" id="sample-id" name="sample-id" placeholder="Enter Sample ID" required>
-
-                <label for="drug-type">Drug Type:</label>
-                <select id="drug-type" name="drug-type" required>
-                    <option value="">-- Select Drug Type --</option>
-                    <option value="Cocaine">Cocaine</option>
-                    <option value="Heroin">Heroin</option>
-                    <option value="Methamphetamine">Methamphetamine</option>
-                </select>
-
-                <button type="button" onclick="processForm()">Submit</button>
-            </form>
+            user-select: none;
+          "
+        >
+          English
         </div>
-
-        <!-- Right Section -->
-        <div class="right-container">
-            <!-- Uploaded Sample -->
-            <div id="user-table-container" style="display: none;">
-                <div class="section-heading">Uploaded Sample:</div>
-                
-                <!-- Dynamic Text -->
-                <div id="dynamic-text-container" class="dynamic-text" style="display: none;"></div>
-
-                <table id="user-table">
-                    <thead>
-                        <tr>
-                            <th>Sample ID</th>
-                            <th>Drug Type</th>
-                            <th>Retention Time</th>
-                            <th>Maximum Abundance</th>
-                        </tr>
-                    </thead>
-                    <tbody id="user-table-body"></tbody>
-                </table>
-            </div>
-
-            <br>
-            <!-- Matches Found Heading -->
-            <div class="section-heading" id="matches-heading" style="display: none;">
-                Matches Found: <span id="matches-count">0</span>
-            </div>
-
-        
-            <!-- Slider Section -->
-            <div class="slider-container" id="slider-container" style="display: none;">
-                <p style="text-align: justify; line-height: 1.5;">Below are the matching samples with close retention times to the uploaded sample. By adjusting the slider, 
-                the samples with a difference in retention time within the allowed variance (±) will be filtered and displayed.</p>
-                <label for="allowed-variance">Allowed Variance:</label>
-                <input type="range" id="allowed-variance" min="0" max="2" step="0.1" value="0.1" oninput="updateVarianceLabel()" onchange="filterTable()">
-                <p>Current Variance: <span id="variance-value">0.1</span></p>
-            </div>
-
-            <!-- Filtered Table -->
-            <table id="result-table" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>Sample ID</th>
-                        <th>Date Acquired</th>
-                        <th>Drug Type</th>
-                        <th>Retention Time</th>
-                        <th>Maximum Abundance</th>
-                    </tr>
-                </thead>
-                <tbody id="result-body"></tbody>
-            </table>
+        <div
+          id="ar-btn"
+          onclick="setLanguage('ar')"
+          style="
+            padding: 8px 16px;
+            background-color: #eee;
+            color: black;
+            cursor: pointer;
+            user-select: none;
+          "
+        >
+          العربية
         </div>
+      </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <div class="container">
+      <div class="sidebar" style="width: 20%">
+        <div class="section">
+          <br />
+          <strong>Upload 1 sample</strong><br /><br />
+          <input type="file" id="single-upload" multiple /><br />
+        </div>
+        <div class="section">
+          <strong>Upload in batch</strong><br /><br />
+          <input type="file" id="batch-upload" multiple /><br />
+        </div>
+        <div class="section">
+          <strong>Enter Case ID:</strong><br />
+          <input
+            type="text"
+            id="case-id-input"
+            placeholder="Enter Case ID"
+          /><br />
+        </div>
+
+        <button onclick="validateUploads()">Submit</button>
+
+        <div id="error-message" class="error-message"></div>
+      </div>
+
+      <!-- Middle Summary Container -->
+      <div
+        id="summary-container"
+        class="sum"
+        style="width: 20%; padding: 20px; text-align: center"
+      >
+        <div
+          id="summary-text"
+          style="
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 16px;
+            line-height: 1.5;
+          "
+        ></div>
+
+        <button
+          id="analyze-button"
+          onclick="analyzeSamples()"
+          style="
+            display: none;
+            padding: 8px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            margin-bottom: 10px;
+            cursor: pointer;
+          "
+        >
+          Analyze
+        </button>
+
+        <button
+          id="save-button"
+          onclick="saveSamplesLocally()"
+          style="
+            display: none;
+            background-color: green;
+            color: white;
+            padding: 8px 20px;
+            margin-bottom: 10px;
+          "
+        >
+          Save Samples
+        </button>
+
+        <button
+          id="print-button"
+          onclick="printReport()"
+          style="
+            display: none;
+            background-color: darkred;
+            color: white;
+            padding: 8px 20px;
+          "
+        >
+          Print Report
+        </button>
+      </div>
+
+      <!-- Right Result Container -->
+      <div class="result-area" style="width: 60%; display: none">
+        <h3 style="text-align: center">Results</h3>
+
+        <div
+          id="processing-msg"
+          style="
+            display: none;
+            text-align: center;
+            margin-top: 50px;
+            font-weight: bold;
+            font-size: 16px;
+            color: grey;
+          "
+        >
+          <img
+            src="https://i.gifer.com/ZZ5H.gif"
+            style="width: 40px; height: 40px"
+          /><br />
+          Processing... Please wait
+        </div>
+
+        <table id="results-table" class="tab">
+          <thead>
+            <tr>
+              <th>Case ID</th>
+              <th>Sample ID</th>
+              <th>Drug Type</th>
+              <th>Retention Time</th>
+              <th>Maximum Abundance</th>
+              <th>Spectrum Similarity %</th>
+              <!-- ✅ New Column -->
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="chart-area">
+        <div
+          id="mode-toggle"
+          style="display: flex; gap: 10px; margin-bottom: 15px"
+        >
+          <div class="mode-pill active" data-mode="info">Info</div>
+          <div class="mode-pill" data-mode="spectrum">Compare Spectrum</div>
+          <div class="mode-pill" data-mode="peaks">View Peaks</div>
+        </div>
+
+        <div
+          id="chart-mode-container"
+          class="second"
+          style="display: flex; flex-direction: column"
+        >
+          <h4>Cocaine Spectrum Reference</h4>
+          <canvas id="referenceChart" width="400" height="100"></canvas>
+          <h4>Sample Spectrum</h4>
+          <div
+            id="match-info"
+            style="
+              margin-bottom: 10px;
+              font-weight: bold;
+              color: #018657;
+              font-size: 16px;
+            "
+          ></div>
+          <canvas id="sampleChart" width="400" height="100"></canvas>
+        </div>
+
+        <div
+          id="info-mode-container"
+          class="second"
+          style="display: none; font-size: 14px; line-height: 1.5"
+        ></div>
+
+        <div id="peaks-mode-container" class="second" style="display: none">
+          <label for="peaks-dropdown"><strong>Show Peaks:</strong></label>
+          <select id="peaks-dropdown">
+            <option value="5" selected>Top 5</option>
+            <option value="10">Top 10</option>
+          </select>
+
+          <canvas id="peaksChart" style="height: 400px"></canvas>
+
+          <div style="max-height: 250px; overflow-y: auto; margin-top: 10px">
+            <table
+              id="peaks-table"
+              class="tab"
+              style="width: 100%; border-collapse: collapse"
+            >
+              <thead>
+                <tr>
+                  <th>Peak</th>
+                  <th>Abundance</th>
+                  <th>Retention Time</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div id="auto-peaks-table" style="margin-bottom: 20px"></div>
+        </div>
+      </div>
+    </div>
+
+    <br />
+    <br />
+    <h1 style="text-align: center">All Saved Samples</h1>
+    <div class="matching-section" style="width: 92%; margin: 25px">
+      <div style="display: flex; width: 100%">
+        <!-- Left 50%: All Samples Table -->
+        <div style="width: 100%">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 0px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 0px;
+              "
+            >
+              <label for="case-filter"
+                ><strong>Filter by Case ID:</strong></label
+              >
+              <select id="case-filter">
+                <option value="">All</option>
+                <option value="C1">C1</option>
+                <option value="C2">C2</option>
+                <option value="C3">C3</option>
+                <option value="C4">C4</option>
+              </select>
+            </div>
+
+            <!-- Filter Buttons -->
+            <div
+              id="drug-filters"
+              style="display: flex; gap: 8px; flex-wrap: wrap"
+            >
+              <div class="drug-pill" data-drug="Cocaine">Cocaine</div>
+              <div class="drug-pill" data-drug="Heroin">Heroin</div>
+              <div class="drug-pill" data-drug="Methamphetamine">
+                Methamphetamine
+              </div>
+            </div>
+
+            <!-- Total Samples Count -->
+            <div style="text-align: right">
+              <div style="font-size: 50px; font-weight: bold" id="sample-count">
+                20
+              </div>
+              <div style="font-size: 15px; color: #555">Total Samples</div>
+            </div>
+          </div>
+
+          <h3 id="all-samples-header-1">All Samples</h3>
+
+          <div style="max-height: 400px; overflow-y: auto">
+            <table
+              id="all-samples-table"
+              class="tab"
+              border="1"
+              cellpadding="8"
+              style="width: 100%; border-collapse: collapse"
+            >
+              <thead
+                style="position: sticky; top: 0; background-color: #f1f1f1"
+              >
+                <tr>
+                  <th>Case ID</th>
+                  <th>Sample ID</th>
+                  <th>Drug Type</th>
+                  <th>Retention Time</th>
+                  <th>Maximum Abundance</th>
+                  <th>Submission Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Preloaded + new rows go here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <br />
+    <br />
+    <br />
+    <h1 style="text-align: center">Drug Sample Matching</h1>
+    <h4 style="text-align: center">
+      Explore the matching samples with close retention times to the selected
+      sample. By adjusting the slider, the samples with a difference in
+      retention time within the allowed variance (±) will be filtered and
+      displayed.
+    </h4>
+    <div class="matching-section" style="width: 93%; margin-top: 30px">
+      <div style="display: flex; width: 100%">
+        <!-- Left 50%: All Samples Table -->
+        <div style="width: 50%; padding: 20px">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 10px;
+            "
+          >
+            <!-- Filter Buttons -->
+            <div
+              id="drug-filters"
+              style="display: flex; gap: 8px; flex-wrap: wrap"
+            >
+              <div class="drug-pill" data-drug="Cocaine">Cocaine</div>
+              <div class="drug-pill" data-drug="Heroin">Heroin</div>
+              <div class="drug-pill" data-drug="Methamphetamine">
+                Methamphetamine
+              </div>
+            </div>
+
+            <!-- Total Samples Count -->
+            <div style="text-align: right">
+              <div style="font-size: 50px; font-weight: bold" id="sample-count">
+                20
+              </div>
+              <div style="font-size: 15px; color: #555">Total Samples</div>
+            </div>
+          </div>
+
+          <h3 id="all-samples-header-2">All Samples</h3>
+
+          <div
+            style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc"
+          >
+            <table
+              id="all-samples-table2"
+              class="tab"
+              border="1"
+              cellpadding="8"
+              style="width: 100%; border-collapse: collapse"
+            >
+              <thead
+                style="position: sticky; top: 0; background-color: #f1f1f1"
+              >
+                <tr>
+                  <th>Sample ID</th>
+                  <th>Drug Type</th>
+                  <th>Retention Time</th>
+                  <th>Maximum Abundance</th>
+                  <th>Submission Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Preloaded + new rows go here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="width: 50%; padding: 20px">
+          <div style="margin-bottom: 10px">
+            <!-- Slider and Match Counter Side-by-Side -->
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                margin-bottom: 10px;
+              "
+            >
+              <!-- Slider with label -->
+              <div style="width: 50%">
+                <label style="font-weight: bold"
+                  >Allowed Variance: <span id="variance-value">1.0</span></label
+                ><br />
+                <input
+                  id="variance-slider"
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value="1.0"
+                  style="width: 100%"
+                />
+                <!-- Ticks below slider -->
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 12px;
+                    margin-top: 2px;
+                  "
+                >
+                  <span>0</span>
+                  <span>2</span>
+                </div>
+              </div>
+
+              <!-- Match Count aligned to right -->
+              <div style="text-align: right">
+                <div
+                  style="font-size: 50px; font-weight: bold"
+                  id="match-count"
+                >
+                  0
+                </div>
+                <div style="font-size: 15px; color: #555">
+                  Found Matches within ±<span id="variance-display-label"
+                    >1.0</span
+                  >
+                  variance
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h3>Found Matches</h3>
+          <div
+            style="max-height: 500px; overflow-y: auto; border: 1px solid #ccc"
+          >
+            <table
+              id="found-matches-table"
+              class="tab"
+              border="1"
+              cellpadding="8"
+              style="width: 100%; border-collapse: collapse"
+            >
+              <thead
+                style="position: sticky; top: 0; background-color: #f1f1f1"
+              >
+                <tr>
+                  <th>Case ID</th>
+                  <th>Sample ID</th>
+                  <th>Drug Type</th>
+                  <th>Retention Time</th>
+                  <th>Maximum Abundance</th>
+                  <th>Difference</th>
+                  <!-- New column -->
+                </tr>
+              </thead>
+
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
-        const tableData = [
-    { SampleID: 'S1', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '107595-22-S1.D', DateAcquired: '04/28/2022 01:35:00 PM', TIC: '107595-22-S1.D\\data.ms', RetentionTime: 16.441, MaxAbundance: 39398596, Instrument: 'GCMS-1', VialNumber: 61, LatitudeAcquired: 25.2465, LongitudeAcquired: 55.3200, SourceID: 'SRC6384', SourceStatus: 'Banned from Country' },
-    { SampleID: 'S2', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '156396-22-C-S1.D', DateAcquired: '12/16/2022 07:34:00 PM', TIC: '156396-22-C-S1.D\\data.ms', RetentionTime: 15.72, MaxAbundance: 150864944, Instrument: 'GCMS-2', VialNumber: 34, LatitudeAcquired: 25.2760, LongitudeAcquired: 55.3230, SourceID: 'Unknown', SourceStatus: 'Unknown' },
-    { SampleID: 'S3', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '88246-2022.D', DateAcquired: '02/21/2022 02:49:00 PM', TIC: '88246-2022.D\\data.ms', RetentionTime: 16.211, MaxAbundance: 11632325, Instrument: 'GCMS-2', VialNumber: 24, LatitudeAcquired: 25.2340, LongitudeAcquired: 55.3150, SourceID: 'Unknown', SourceStatus: 'Unknown' },
-    { SampleID: 'S4', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '152383-22-S1.D', DateAcquired: '04/11/2022 02:26:00 PM', TIC: '152383-22-S1.D\\data.ms', RetentionTime: 15.463, MaxAbundance: 25371720, Instrument: 'GCMS-3', VialNumber: 3, LatitudeAcquired: 25.2295, LongitudeAcquired: 55.3273, SourceID: 'SRC1023', SourceStatus: 'Legitimate Legal Source' },
-    { SampleID: 'S5', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '139301-22-S1.D', DateAcquired: '01/09/2022 03:18:00 PM', TIC: '139301-22-S1.D\\data.ms', RetentionTime: 15.149, MaxAbundance: 3080717, Instrument: 'GCMS-8', VialNumber: 7, LatitudeAcquired: 25.0935, LongitudeAcquired: 55.1850, SourceID: 'Unknown', SourceStatus: 'Unknown' },
-    { SampleID: 'S6', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '107596-22-S1.D', DateAcquired: '05/29/2022 07:35:00 PM', TIC: '107596-22-S1.D\\data.ms', RetentionTime: 16.444, MaxAbundance: 39398596, Instrument: 'GCMS-4', VialNumber: 25, LatitudeAcquired: 25.2900, LongitudeAcquired: 55.3910, SourceID: 'SRC6384', SourceStatus: 'Banned from Country' },
-    { SampleID: 'S7', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '193383-22-S1.D', DateAcquired: '12/30/2022 08:13:00 PM', TIC: '193383-22-S1.D\\data.ms', RetentionTime: 15.92, MaxAbundance: 458923852, Instrument: 'GCMS-3', VialNumber: 15, LatitudeAcquired: 25.2810, LongitudeAcquired: 55.3660, SourceID: 'Unknown', SourceStatus: 'Unknown' },
-    { SampleID: 'S8', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '837428-2022.D', DateAcquired: '05/31/2022 12:00:00 PM', TIC: '837428-2022.D\\data.ms', RetentionTime: 16.455, MaxAbundance: 32857482, Instrument: 'GCMS-2', VialNumber: 32, LatitudeAcquired: 25.1110, LongitudeAcquired: 55.2000, SourceID: 'SRC6384', SourceStatus: 'Banned from Country' },
-    { SampleID: 'S9', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '3273952-22-S1.D', DateAcquired: '01/20/2022 09:20:00 PM', TIC: '3273952-22-S1.D\\data.ms', RetentionTime: 15.457, MaxAbundance: 57296846, Instrument: 'GCMS-8', VialNumber: 2, LatitudeAcquired: 25.2520, LongitudeAcquired: 55.3650, SourceID: 'SRC1023', SourceStatus: 'Legitimate Legal Source' },
-    { SampleID: 'S10', ID: 'Cocaine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '8573729-22-S1.D', DateAcquired: '01/07/2022 08:34:00 PM', TIC: '8573729-22-S1.D\\data.ms', RetentionTime: 15.423, MaxAbundance: 113748525, Instrument: 'GCMS-2', VialNumber: 18, LatitudeAcquired: 25.1170, LongitudeAcquired: 55.2000, SourceID: 'SRC1023', SourceStatus: 'Legitimate Legal Source' },
-    { SampleID: 'S11', ID: 'Heroin', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '48383729-22-S1.D', DateAcquired: '04/22/2022 08:26:00 PM', TIC: '48383729-22-S1.D\\data.ms', RetentionTime: 20.132, MaxAbundance: 869472714, Instrument: 'GCMS-8', VialNumber: 17, LatitudeAcquired: 25.1850, LongitudeAcquired: 55.2500, SourceID: 'SRC9999', SourceStatus: 'Under Investigation' },
-    { SampleID: 'S12', ID: 'Heroin', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '546383-22-S1.D', DateAcquired: '03/15/2022 04:49:00 PM', TIC: '546383-22-S1.D\\data.ms', RetentionTime: 21.967, MaxAbundance: 294958194, Instrument: 'GCMS-2', VialNumber: 12, LatitudeAcquired: 25.1990, LongitudeAcquired: 55.2530, SourceID: 'SRC6384', SourceStatus: 'Banned from Country' },
-    { SampleID: 'S13', ID: 'Heroin', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '58573729-22-C-S1.D', DateAcquired: '05/20/2022 04:20:00 PM', TIC: '58573729-22-C-S1.D\\data.ms', RetentionTime: 20.136, MaxAbundance: 973718485, Instrument: 'GCMS-8', VialNumber: 9, LatitudeAcquired: 25.2710, LongitudeAcquired: 55.3300, SourceID: 'SRC9999', SourceStatus: 'Under Investigation' },
-    { SampleID: 'S14', ID: 'Heroin', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '558827-2022.D', DateAcquired: '04/03/2022 07:59:00 PM', TIC: '558827-2022.D\\data.ms', RetentionTime: 20.142, MaxAbundance: 1253547582, Instrument: 'GCMS-1', VialNumber: 13, LatitudeAcquired: 25.2500, LongitudeAcquired: 55.3000, SourceID: 'SRC9999', SourceStatus: 'Under Investigation' },
-    { SampleID: 'S15', ID: 'Heroin', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '1958671-22-S1.D', DateAcquired: '08/11/2022 06:39:00 PM', TIC: '1958671-22-S1.D\\data.ms', RetentionTime: 20.563, MaxAbundance: 8883747569, Instrument: 'GCMS-1', VialNumber: 14, LatitudeAcquired: 25.2700, LongitudeAcquired: 55.3300, SourceID: 'Unknown', SourceStatus: 'Unknown' },
-    { SampleID: 'S16', ID: 'Methamphetamine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '45826-22-C-S1.D', DateAcquired: '09/18/2022 04:26:00 PM', TIC: '45826-22-C-S1.D\\data.ms', RetentionTime: 10.934, MaxAbundance: 86927247692, Instrument: 'GCMS-1', VialNumber: 24, LatitudeAcquired: 25.2300, LongitudeAcquired: 55.3200, SourceID: 'SRC1111', SourceStatus: 'Banned from Country' },
-    { SampleID: 'S17', ID: 'Methamphetamine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '1558333-22-S1.D', DateAcquired: '05/31/2022 06:00:00 PM', TIC: '1558333-22-S1.D\\data.ms', RetentionTime: 11.867, MaxAbundance: 637288582, Instrument: 'GCMS-3', VialNumber: 22, LatitudeAcquired: 25.2400, LongitudeAcquired: 55.3400, SourceID: 'Unknown', SourceStatus: 'Unknown' },
-    { SampleID: 'S18', ID: 'Methamphetamine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '594982-2022.D', DateAcquired: '08/23/2022 07:11:00 AM', TIC: '594982-2022.D\\data.ms', RetentionTime: 10.921, MaxAbundance: 1234958295, Instrument: 'GCMS-3', VialNumber: 1, LatitudeAcquired: 25.2200, LongitudeAcquired: 55.2700, SourceID: 'SRC1111', SourceStatus: 'Banned from Country' },
-    { SampleID: 'S19', ID: 'Methamphetamine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '987346-2022.D', DateAcquired: '10/22/2022 07:26:00 PM', TIC: '987346-2022.D\\data.ms', RetentionTime: 11.572, MaxAbundance: 43285729384, Instrument: 'GCMS-3', VialNumber: 8, LatitudeAcquired: 25.2500, LongitudeAcquired: 55.2700, SourceID: 'SRC6384', SourceStatus: 'Banned from Country' },
-    { SampleID: 'S20', ID: 'Methamphetamine', Path: 'D:\\MassHunter\\GCMS\\1\\DATA_2022\\', File: '197868-22-S1.D', DateAcquired: '09/30/2022 08:26:00 PM', TIC: '197868-22-S1.D\\data.ms', RetentionTime: 10.822, MaxAbundance: 76463837587, Instrument: 'GCMS-2', VialNumber: 43, LatitudeAcquired: 25.2700, LongitudeAcquired: 55.3200, SourceID: 'SRC1111', SourceStatus: 'Banned from Country' }
-];
+      const chromFiles = {}; // sampleID => CHROMTAB content
 
+      const sampleRetention = {}; // sampleID => retentionTime
+      const sampleAbundance = {}; // sampleID => maxAbundance
 
-        let userRetentionTime = null;
-        let selectedDrugType = null;
+      const referenceSpectrum = {
+        40.1: 39968,
+        41.1: 281344,
+        42.1: 1018112,
+        43.1: 66024,
+        44.1: 154368,
+        45.1: 37216,
+        46.2: 1176,
+        47.0: 519,
+        47.7: 1005,
+        48.1: 969,
+        50.1: 181056,
+        51.1: 679744,
+        52.1: 76704,
+        53.1: 187136,
+        54.1: 138432,
+        55.1: 373760,
+        56.1: 186816,
+        57.1: 227648,
+        58.1: 54824,
+        59.1: 245568,
+        60.4: 12554,
+        62.0: 9540,
+        63.1: 19592,
+        64.1: 11550,
+        65.1: 167872,
+        66.1: 86688,
+        67.1: 338624,
+        68.1: 375552,
+        69.1: 107664,
+        70.1: 169408,
+        71.1: 49632,
+        72.1: 13939,
+        73.1: 11960,
+        74.1: 54200,
+        75.2: 56536,
+        76.2: 170240,
+        77.1: 2643968,
+        78.1: 281664,
+        79.1: 233280,
+        80.1: 225536,
+        81.1: 782848,
+        82.1: 5759488,
+        83.1: 2654720,
+        84.1: 294464,
+        85.1: 27296,
+        86.1: 7305,
+        87.1: 9151,
+        88.1: 1381,
+        89.1: 5529,
+        91.1: 337088,
+        92.1: 84584,
+        93.1: 355520,
+        94.1: 2814464,
+        95.1: 367680,
+        96.1: 1986560,
+        97.1: 912000,
+        98.1: 94840,
+        99.1: 18944,
+        100.1: 82256,
+        101.1: 16440,
+        102.1: 5788,
+        103.2: 14912,
+        105.1: 2570240,
+        106.1: 268928,
+        107.1: 129320,
+        108.1: 392128,
+        109.1: 85568,
+        110.1: 160384,
+        111.1: 32944,
+        112.1: 13292,
+        113.1: 10521,
+        114.1: 30384,
+        115.1: 20952,
+        116.1: 6318,
+        117.1: 21584,
+        118.1: 44608,
+        119.1: 299456,
+        120.1: 143296,
+        121.1: 75312,
+        122.1: 808832,
+        123.1: 146944,
+        124.1: 93408,
+        125.1: 39992,
+        126.1: 34816,
+        127.1: 9129,
+        128.1: 12076,
+        129.1: 3622,
+        130.0: 4652,
+        131.1: 5649,
+        132.1: 31280,
+        133.1: 26688,
+        134.1: 20152,
+        135.1: 51856,
+        136.1: 31912,
+        137.2: 8003,
+        138.1: 67672,
+        139.1: 17312,
+        140.1: 103752,
+        141.1: 13390,
+        142.1: 17632,
+        143.1: 3970,
+        144.0: 2259,
+        145.0: 1412,
+        146.2: 1898,
+        147.2: 3688,
+        148.1: 33536,
+        149.2: 15101,
+        150.1: 307904,
+        151.2: 53920,
+        152.1: 318208,
+        153.1: 67952,
+        154.1: 133632,
+        155.1: 260096,
+        156.1: 42752,
+        157.1: 5169,
+        158.1: 2326,
+        159.1: 2914,
+        160.2: 9063,
+        161.1: 1602,
+        162.1: 4249,
+        163.3: 1123,
+        164.1: 10785,
+        166.1: 325888,
+        167.1: 37096,
+        168.1: 16544,
+        169.2: 3320,
+        170.1: 26552,
+        171.1: 3281,
+        172.2: 1399,
+        173.2: 747,
+        174.1: 650,
+        175.3: 348,
+        176.3: 485,
+        178.2: 2381,
+        180.2: 202560,
+        181.2: 580544,
+        182.2: 6546944,
+        183.2: 1015296,
+        184.2: 94720,
+        185.2: 7623,
+        186.1: 1616,
+        187.1: 609,
+        188.1: 1504,
+        189.1: 407,
+        190.1: 3669,
+        191.0: 1019,
+        192.0: 229,
+        193.0: 494,
+        193.9: 334,
+        195.2: 439,
+        196.2: 3481,
+        198.2: 1127936,
+        199.2: 136128,
+        200.2: 29816,
+        201.1: 3195,
+        202.1: 955,
+        204.1: 5498,
+        205.1: 823,
+        207.1: 2823,
+        208.1: 728,
+        209.1: 490,
+        212.1: 440,
+        213.4: 425,
+        214.1: 8930,
+        215.2: 1353,
+        216.1: 1147,
+        217.2: 214,
+        221.2: 329,
+        222.1: 21864,
+        223.2: 2924,
+        224.1: 576,
+        226.2: 437,
+        227.1: 205,
+        227.9: 562,
+        230.1: 2084,
+        231.1: 700,
+        232.0: 207,
+        242.1: 6743,
+        243.2: 2586,
+        244.2: 61736,
+        245.2: 11048,
+        246.1: 1129,
+        247.3: 163,
+        249.0: 218,
+        251.0: 195,
+        254.1: 217,
+        257.2: 220,
+        258.3: 2325,
+        259.2: 25280,
+        260.2: 7229,
+        261.1: 1067,
+        261.9: 283,
+        267.1: 204,
+        269.3: 285,
+        272.2: 980544,
+        273.2: 183552,
+        274.2: 28104,
+        275.2: 5651,
+        281.0: 1145,
+        283.1: 261,
+        284.3: 188,
+        285.2: 151,
+        285.9: 181,
+        288.2: 14665,
+        289.1: 2237,
+        290.1: 403,
+        299.9: 462,
+        303.2: 2478080,
+        304.2: 508864,
+        305.2: 69552,
+        306.2: 7043,
+        307.1: 742,
+        341.1: 151,
+        355.0: 227,
+        356.0: 196,
+      };
 
-        function processForm() {
-            const sampleId = document.getElementById('sample-id').value;
-            selectedDrugType = document.getElementById('drug-type').value;
+      function cosineSimilarity(vecA, vecB) {
+        let dot = 0;
+        let magA = 0;
+        let magB = 0;
 
-            if (!selectedDrugType || !sampleId) {
-                alert('Please fill in all fields.');
-                return;
+        for (let i = 0; i < vecA.length; i++) {
+          dot += vecA[i] * vecB[i];
+          magA += vecA[i] * vecA[i];
+          magB += vecB[i] * vecB[i];
+        }
+
+        if (magA === 0 || magB === 0) return 0;
+        return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+      }
+
+      const spectrumFiles = {}; // store sampleID => spectrum text
+
+      let referenceChart, sampleChart;
+
+      function validateUploads() {
+        const single = [...document.getElementById("single-upload").files];
+        const batch = [...document.getElementById("batch-upload").files];
+        const files = [...single, ...batch];
+        const error = document.getElementById("error-message");
+        error.style.display = "none";
+
+        if (
+          (single.length > 0 && single.length !== 2) ||
+          (batch.length > 0 && batch.length % 2 !== 0)
+        ) {
+          error.textContent = "Upload both CHROMTAB and SPECTRUM files.";
+          error.style.display = "block";
+          return;
+        }
+
+        const grouped = {};
+        for (let file of files) {
+          const sampleNum = file.name.match(/S(\d+)/i)?.[1];
+          if (!sampleNum) continue;
+          const id = `S${sampleNum}`;
+          grouped[id] = grouped[id] || {};
+          if (file.name.toUpperCase().includes("CHROMTAB"))
+            grouped[id].chrom = file;
+          if (file.name.toUpperCase().includes("SPECTRUM"))
+            grouped[id].spectrum = file;
+        }
+
+        Object.entries(grouped).forEach(([id, pair]) => {
+          if (pair.chrom && pair.spectrum) {
+            Promise.all([readFile(pair.chrom), readFile(pair.spectrum)]).then(
+              ([chromData, specData]) => {
+                const { maxAbundance, retentionTime } =
+                  getMaxFromChrom(chromData);
+                spectrumFiles[id] = specData; // Save spectrum for chart later
+                chromFiles[id] = chromData; // ✅ store CHROMTAB content
+
+                const drugType = matchCocaine(specData) ? "Cocaine" : "Unknown";
+                addToTable(id, drugType, retentionTime, maxAbundance);
+              }
+            );
+          }
+        });
+
+        document.getElementById("analyze-button").style.display =
+          "inline-block";
+      }
+
+      function readFile(file) {
+        return new Promise((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result);
+          reader.onerror = rej;
+          reader.readAsText(file);
+        });
+      }
+
+      function getMaxFromChrom(text) {
+        const lines = text.trim().split("\n").slice(3);
+        let max = -Infinity,
+          rt = 0;
+        for (let line of lines) {
+          const [t, val] = line.trim().split(/[,\t ]+/);
+          const numVal = parseFloat(val);
+          if (numVal > max) {
+            max = numVal;
+            rt = parseFloat(t);
+          }
+        }
+        return { maxAbundance: max, retentionTime: rt };
+      }
+
+      function matchCocaine(text) {
+        const lines = text.trim().split("\n").slice(4);
+        const sampleSpectrum = {};
+        for (let line of lines) {
+          const [mz, ab] = line.trim().split(/[,\t ]+/);
+          if (mz && ab)
+            sampleSpectrum[parseFloat(mz).toFixed(1)] = parseFloat(ab);
+        }
+
+        const cocainePeaks = [77, 82.1, 94.1, 105, 122.1, 182.1, 303.1];
+        let markerMatchScore = 0;
+        const tolerance = 0.5;
+        const maxAb = Math.max(...Object.values(sampleSpectrum));
+
+        for (let refMz of cocainePeaks) {
+          for (let mz in sampleSpectrum) {
+            const diff = Math.abs(refMz - parseFloat(mz));
+            if (diff <= tolerance) {
+              const norm = sampleSpectrum[mz] / maxAb;
+              if (norm > 0.05) markerMatchScore += 1;
+              break;
+            }
+          }
+        }
+
+        // -----------------------------
+        // Now do full-spectrum comparison
+        const refLabels = Object.keys(referenceSpectrum)
+          .map((mz) => parseFloat(mz).toFixed(1))
+          .sort((a, b) => a - b);
+
+        const sampleData = refLabels.map((mz) => sampleSpectrum[mz] || 0);
+        const referenceData = refLabels.map(
+          (mz) => referenceSpectrum[parseFloat(mz)] || 0
+        );
+
+        const normSample = sampleData.map((v) => v / Math.max(...sampleData));
+        const normRef = referenceData.map(
+          (v) => v / Math.max(...referenceData)
+        );
+
+        const similarity = cosineSimilarity(normSample, normRef);
+        const matchPercent = similarity * 100;
+
+        // -----------------------------
+        // Final classification logic:
+        return markerMatchScore >= 4 && matchPercent >= 85;
+      }
+
+      function addToTable(id, drug, rt, abundance) {
+        const row = document.createElement("tr");
+
+        // Get case ID from input
+        const caseID = document.getElementById("case-id-input").value || "N/A";
+
+        // Compute spectrum similarity
+        const sampleText = spectrumFiles[id];
+        const lines = sampleText.trim().split("\n").slice(4);
+        const sampleSpectrum = {};
+        for (let line of lines) {
+          const [mz, ab] = line.trim().split(/[,\t ]+/);
+          if (mz && ab) {
+            sampleSpectrum[parseFloat(mz).toFixed(1)] = parseFloat(ab);
+          }
+        }
+
+        const refLabels = Object.keys(referenceSpectrum)
+          .map((mz) => parseFloat(mz).toFixed(1))
+          .sort((a, b) => a - b);
+
+        const sampleData = refLabels.map((mz) => sampleSpectrum[mz] || 0);
+        const referenceData = refLabels.map(
+          (mz) => referenceSpectrum[parseFloat(mz)] || 0
+        );
+
+        const normSample = sampleData.map((v) => v / Math.max(...sampleData));
+        const normRef = referenceData.map(
+          (v) => v / Math.max(...referenceData)
+        );
+
+        const simScore = cosineSimilarity(normSample, normRef);
+        const matchPercent = (simScore * 100).toFixed(2);
+
+        // Add row to new samples table
+        row.innerHTML = `
+    <td>${caseID}</td>
+    <td>${id}</td>
+    <td>${drug}</td>
+    <td>${rt.toFixed(3)}</td>
+    <td>${abundance}</td>
+    <td>${matchPercent}%</td>`;
+
+        row.onclick = () => updateSampleChart(id);
+        document.querySelector("#results-table tbody").appendChild(row);
+
+        // Show "Save Sample(s)?" button if rows exist
+        document.getElementById("save-button").style.display = "inline-block";
+        document.getElementById("print-button").style.display = "inline-block";
+        updateSummaryText();
+      }
+
+      function initCharts() {
+        const refData = Object.entries(referenceSpectrum).map(([mz, ab]) => ({
+          mz: parseFloat(mz),
+          ab,
+        }));
+        refData.sort((a, b) => a.mz - b.mz);
+
+        const refLabels = refData.map((d) => d.mz.toFixed(1));
+        const refValues = refData.map((d) => d.ab);
+
+        const top10Indices = [...refValues]
+          .map((ab, i) => ({ ab, i }))
+          .sort((a, b) => b.ab - a.ab)
+          .slice(0, 10)
+          .map((obj) => obj.i);
+
+        referenceChart = new Chart(
+          document.getElementById("referenceChart").getContext("2d"),
+          {
+            type: "bar",
+            data: {
+              labels: refLabels,
+              datasets: [
+                {
+                  label: "Abundance",
+                  data: refValues,
+                  backgroundColor: "rgba(0,123,255,0.6)", // BLUE
+                },
+              ],
+            },
+            options: {
+              plugins: {
+                datalabels: {
+                  color: "#000",
+                  align: "end",
+                  anchor: "end",
+                  display: function (context) {
+                    return top10Indices.includes(context.dataIndex);
+                  },
+                  formatter: function (value, context) {
+                    return context.chart.data.labels[context.dataIndex]; // m/z label
+                  },
+                },
+                legend: { display: false },
+                font: {
+                  size: 8, // 👈 You can change this number (e.g., 8, 10, 12)
+                },
+              },
+              scales: {
+                x: { title: { display: true, text: "m/z" } },
+                y: { title: { display: true, text: "Abundance" } },
+              },
+            },
+            plugins: [ChartDataLabels],
+          }
+        );
+
+        sampleChart = new Chart(
+          document.getElementById("sampleChart").getContext("2d"),
+          {
+            type: "bar",
+            data: {
+              labels: refLabels,
+              datasets: [
+                {
+                  label: "Abundance",
+                  data: Array(refLabels.length).fill(0),
+                  backgroundColor: "rgba(255,165,0,0.6)", // ORANGE
+                },
+              ],
+            },
+            options: {
+              plugins: {
+                datalabels: {
+                  color: "#000",
+                  align: "end",
+                  anchor: "end",
+                  display: false,
+                  formatter: function (value, context) {
+                    return context.chart.data.labels[context.dataIndex]; // m/z label
+                  },
+                },
+                legend: { display: false },
+              },
+              scales: {
+                x: { title: { display: true, text: "m/z" } },
+                y: { title: { display: true, text: "Abundance" } },
+              },
+            },
+            plugins: [ChartDataLabels],
+          }
+        );
+      }
+
+      function updateSampleChart(sampleID) {
+        latestSampleID = sampleID;
+
+        const text = spectrumFiles[sampleID];
+        const lines = text.trim().split("\n").slice(4);
+        const sampleSpectrum = {};
+
+        for (let line of lines) {
+          const [mz, ab] = line.trim().split(/[,\t ]+/);
+          if (mz && ab) {
+            sampleSpectrum[parseFloat(mz).toFixed(1)] = parseFloat(ab);
+          }
+        }
+
+        const refLabels = referenceChart.data.labels;
+        const alignedData = refLabels.map((mz) => {
+          const key = parseFloat(mz).toFixed(1);
+          return sampleSpectrum[key] || 0;
+        });
+
+        sampleChart.data.labels = refLabels;
+        sampleChart.data.datasets[0].data = alignedData;
+        sampleChart.data.datasets[0].backgroundColor = "rgba(255,165,0,0.6)"; // keep orange
+
+        // Get top 10 peak indices
+        const top10Indices = [...alignedData]
+          .map((ab, i) => ({ ab, i }))
+          .sort((a, b) => b.ab - a.ab)
+          .slice(0, 10)
+          .map((obj) => obj.i);
+
+        // Count signature markers matched
+        const cocainePeaks = [77, 82.1, 94.1, 105, 122.1, 182.1, 303.1];
+        let matchedMarkers = 0;
+        const tolerance = 0.5;
+        const maxAb = Math.max(...alignedData);
+
+        const chromText = chromFiles[sampleID];
+
+        const chromLines = chromText.trim().split("\n");
+        const rowCount = chromLines.length - 3; // skip header lines
+        const infoDiv = document.getElementById("info-mode-container");
+
+        /*
+        infoDiv.innerHTML = `
+  <div style="font-size: 16px; line-height: 1.5;">
+    Sample <strong>${sampleID}</strong> contained <strong>${rowCount}</strong> rows of data, 
+    from which a maximum abundance of <strong>${maxAb}</strong> was retrieved, 
+    this is the total intensity of a detected substance in forensic drug testing. 
+    A retention time of <strong>${
+      refLabels[alignedData.indexOf(maxAb)]
+    }</strong> was found, 
+    which is the time it takes for a compound to travel through the chromatography column.
+  </div>
+`;*/
+
+        infoDiv.innerHTML = `
+<div style="font-size: 16px; line-height: 1.5;">
+  ${translations[currentLang].infoText(
+    sampleID,
+    rowCount,
+    maxAb,
+    refLabels[alignedData.indexOf(maxAb)]
+  )}
+</div>
+`;
+
+        for (let refMz of cocainePeaks) {
+          for (let i = 0; i < refLabels.length; i++) {
+            const mz = parseFloat(refLabels[i]);
+            if (
+              Math.abs(mz - refMz) <= tolerance &&
+              alignedData[i] / maxAb > 0.05
+            ) {
+              matchedMarkers++;
+              break;
+            }
+          }
+        }
+
+        // Normalize aligned data for cosine comparison
+        const sampleNorm = alignedData.map((v) => v / Math.max(...alignedData));
+        const refNorm = referenceChart.data.datasets[0].data.map(
+          (v) => v / Math.max(...referenceChart.data.datasets[0].data)
+        );
+
+        // Calculate cosine similarity
+        const simScore = cosineSimilarity(sampleNorm, refNorm);
+        const matchPercent = (simScore * 100).toFixed(2);
+
+        document.getElementById(
+          "match-info"
+        ).innerHTML = `Spectrum Similarity %: ${matchPercent}%<br>`;
+
+        // Show only labels for top 10
+        sampleChart.options.plugins.datalabels.display = function (context) {
+          return top10Indices.includes(context.dataIndex);
+        };
+
+        // Show m/z value as label
+        sampleChart.options.plugins.datalabels.formatter = function (
+          value,
+          context
+        ) {
+          return context.chart.data.labels[context.dataIndex]; // m/z value
+        };
+
+        sampleChart.update();
+        updateModeView();
+      }
+
+      function saveSamplesLocally() {
+        const rows = document.querySelectorAll("#results-table tbody tr");
+
+        const allSamplesTable1 = document.querySelector(
+          "#all-samples-table tbody"
+        );
+        const allSamplesTable2 = document.querySelector(
+          "#all-samples-table2 tbody"
+        );
+
+        rows.forEach((row) => {
+          const cells = row.querySelectorAll("td");
+
+          // Row for All Samples Table 1 (with submission time)
+          const tr1 = document.createElement("tr");
+          for (let i = 0; i < 5; i++) {
+            const td = document.createElement("td");
+            td.textContent = cells[i].textContent;
+            tr1.appendChild(td);
+          }
+
+          const timestamp = new Date().toLocaleString();
+          const tdTime = document.createElement("td");
+          tdTime.textContent = timestamp;
+          tr1.appendChild(tdTime);
+          allSamplesTable1.insertBefore(tr1, allSamplesTable1.firstChild);
+
+          // Row for All Samples Table 2 (without submission time)
+          const tr2 = document.createElement("tr");
+          for (let i = 0; i < 5; i++) {
+            const td = document.createElement("td");
+            td.textContent = cells[i].textContent;
+            tr2.appendChild(td);
+          }
+          allSamplesTable2.insertBefore(tr2, allSamplesTable2.firstChild);
+        });
+
+        updateCaseFilter();
+
+        alert("Sample(s) added to All Samples!");
+      }
+
+      function updateCaseFilter() {
+        const rows = document.querySelectorAll("#all-samples-table tbody tr");
+        const caseSet = new Set();
+
+        // Collect unique Case IDs from All Samples table
+        rows.forEach((row) => {
+          const caseID = row.children[0].textContent; // Case ID is in the first column
+          if (caseID) {
+            caseSet.add(caseID);
+          }
+        });
+
+        // Get the case filter dropdown
+        const caseFilter = document.getElementById("case-filter");
+
+        // Clear existing options except 'All'
+        const defaultOption = caseFilter.querySelector("option[value='']");
+        caseFilter.innerHTML = ""; // Clear all options
+        caseFilter.appendChild(defaultOption); // Add back the default 'All' option
+
+        // Add unique case IDs as new options
+        caseSet.forEach((caseID) => {
+          const option = document.createElement("option");
+          option.value = caseID;
+          option.textContent = caseID;
+          caseFilter.appendChild(option);
+        });
+      }
+
+      const initialSamples = [
+        ["C1", "S1", "Cocaine", 16.441, 39398596, "4/28/2022 1:35:00 PM"],
+        ["C1", "S2", "Cocaine", 15.72, 150864944, "12/16/2022 7:34:00 PM"],
+        ["C1", "S3", "Cocaine", 16.211, 11632325, "2/21/2022 2:49:00 PM"],
+        ["C1", "S4", "Cocaine", 15.463, 25371720, "4/11/2022 02:26:00 PM"],
+        ["C1", "S5", "Cocaine", 15.149, 3080717, "1/09/2022 03:18:00 PM"],
+        ["C2", "S6", "Cocaine", 16.444, 39398596, "5/29/2022 7:35:00 PM"],
+        ["C2", "S7", "Cocaine", 15.92, 458923852, "12/30/2022 8:13:00 PM"],
+        ["C2", "S8", "Cocaine", 16.455, 32857482, "5/31/2022 12:00:00 PM"],
+        ["C4", "S9", "Cocaine", 15.457, 57296846, "1/20/2022 9:20:00 PM"],
+        ["C4", "S10", "Cocaine", 15.423, 113748525, "1/07/2022 8:34:00 PM"],
+        ["C1", "S11", "Heroin", 20.132, 869472714, "4/22/2022 8:26:00 PM"],
+        ["C1", "S12", "Heroin", 21.967, 294958194, "03/15/2022 4:49:00 PM"],
+        ["C1", "S13", "Heroin", 20.136, 973718485, "05/20/2022 4:20:00 PM"],
+        ["C2", "S14", "Heroin", 20.142, 1253547582, "4/03/2022 7:59:00 PM"],
+        ["C2", "S15", "Heroin", 20.563, 8883747569, "8/11/2022 6:39:00 PM"],
+        [
+          "C2",
+          "S16",
+          "Methamphetamine",
+          10.934,
+          86927247692,
+          "09/18/2022 4:26:00 PM",
+        ],
+        [
+          "C3",
+          "S17",
+          "Methamphetamine",
+          11.867,
+          637288582,
+          "05/31/2022 6:00:00 PM",
+        ],
+        [
+          "C3",
+          "S18",
+          "Methamphetamine",
+          10.921,
+          1234958295,
+          "08/23/2022 7:11:00 AM",
+        ],
+        [
+          "C4",
+          "S19",
+          "Methamphetamine",
+          11.572,
+          43285729384,
+          "10/22/2022 7:26:00 PM",
+        ],
+        [
+          "C4",
+          "S20",
+          "Methamphetamine",
+          10.822,
+          76463837587,
+          "09/30/2022 8:26:00 PM",
+        ],
+      ];
+
+      function loadInitialSamples() {
+        const table = document.querySelector("#all-samples-table tbody");
+        initialSamples.forEach((row) => {
+          const tr = document.createElement("tr");
+          row.forEach((cell) => {
+            const td = document.createElement("td");
+            td.textContent = cell;
+            tr.appendChild(td);
+          });
+
+          table.appendChild(tr);
+        });
+      }
+
+      function cloneInitialSamplesToTable2() {
+        const table1Rows = document.querySelectorAll(
+          "#all-samples-table tbody tr"
+        );
+        const table2Body = document.querySelector("#all-samples-table2 tbody");
+
+        table1Rows.forEach((row) => {
+          const tr = document.createElement("tr");
+          for (let i = 0; i < 5; i++) {
+            // Copy only first 5 cells (no submission time)
+            const td = document.createElement("td");
+            td.textContent = row.children[i].textContent;
+            tr.appendChild(td);
+          }
+          table2Body.appendChild(tr);
+        });
+      }
+
+      window.onload = () => {
+        initCharts();
+        loadInitialSamples();
+        cloneInitialSamplesToTable2();
+        updateCaseFilter();
+        setLanguage("en");
+      };
+
+      const selectedDrugs = new Set();
+
+      document.querySelectorAll(".drug-pill").forEach((pill) => {
+        pill.addEventListener("click", () => {
+          const drug = pill.dataset.drug;
+
+          // Toggle active class
+          pill.classList.toggle("active");
+
+          // Update selectedDrugs set
+          if (selectedDrugs.has(drug)) {
+            selectedDrugs.delete(drug);
+          } else {
+            selectedDrugs.add(drug);
+          }
+
+          filterSamplesTable();
+        });
+      });
+
+      document
+        .querySelector("#all-samples-table2")
+        .addEventListener("click", (e) => {
+          const row = e.target.closest("tr");
+          if (!row || !row.parentElement) return;
+
+          // Remove highlight from both tables
+          document.querySelectorAll(".selected-sample-row").forEach((r) => {
+            r.classList.remove("selected-sample-row");
+          });
+
+          // Add green highlight to selected row
+          row.classList.add("selected-sample-row");
+
+          // Retention Time is in column 2 (0-based index)
+          const retentionTime = parseFloat(row.children[3].textContent);
+          selectedReferenceSample = retentionTime;
+
+          updateFoundMatchesTable();
+        });
+
+      function filterSamplesTable() {
+        const rows = document.querySelectorAll("#all-samples-table tbody tr");
+        let visibleCount = 0;
+
+        // Get selected case from dropdown
+        const selectedCase = document.getElementById("case-filter").value;
+
+        rows.forEach((row) => {
+          const caseID = row.children[0].textContent; // Case ID is now in the first column
+          const drugType = row.children[2].textContent; // Drug Type remains in column 2
+
+          // Check if case filter matches or if nothing is selected
+          const matchesCase = !selectedCase || caseID === selectedCase;
+
+          // Check if drug filter matches or no filter selected
+          const matchesDrug =
+            selectedDrugs.size === 0 || selectedDrugs.has(drugType);
+
+          // Show row only if both case and drug filters match
+          if (matchesCase && matchesDrug) {
+            row.style.display = "";
+            visibleCount++;
+          } else {
+            row.style.display = "none";
+          }
+        });
+
+        // Update sample count display
+        document.getElementById("sample-count").textContent = visibleCount;
+      }
+
+      let selectedReferenceSample = null;
+
+      document
+        .querySelector("#all-samples-table2")
+        .addEventListener("click", (e) => {
+          const row = e.target.closest("tr");
+          if (!row || !row.parentElement) return;
+
+          // Remove highlight from both tables
+          document.querySelectorAll(".selected-sample-row").forEach((r) => {
+            r.classList.remove("selected-sample-row");
+          });
+
+          // Add green highlight to selected row
+          row.classList.add("selected-sample-row");
+
+          const retentionTime = parseFloat(row.children[3].textContent);
+          selectedReferenceSample = retentionTime;
+
+          updateFoundMatchesTable();
+        });
+
+      document
+        .getElementById("variance-slider")
+        .addEventListener("input", () => {
+          const val = parseFloat(
+            document.getElementById("variance-slider").value
+          );
+          document.getElementById("variance-value").textContent =
+            val.toFixed(1);
+          document.getElementById("variance-display-label").textContent =
+            val.toFixed(1);
+
+          updateFoundMatchesTable(); // live update
+        });
+
+      function updateFoundMatchesTable() {
+        console.log("Selected Retention Time:", selectedReferenceSample);
+
+        const refTime = selectedReferenceSample;
+        if (refTime === null) return;
+
+        const variance = parseFloat(
+          document.getElementById("variance-slider").value
+        );
+        const allRows = document.querySelectorAll(
+          "#all-samples-table2 tbody tr"
+        );
+
+        const foundTable = document.querySelector("#found-matches-table tbody");
+
+        // Clear old matches
+        foundTable.innerHTML = "";
+
+        let matchCount = 0; // ✅ Declare this
+
+        allRows.forEach((row) => {
+          const rt = parseFloat(row.children[3].textContent);
+
+          console.log("Comparing with Row Retention Time:", rt);
+
+          if (row.offsetParent === null || rt === selectedReferenceSample)
+            return;
+
+          const diff = Math.abs(selectedReferenceSample - rt);
+          console.log("Diff:", diff);
+
+          if (diff <= variance) {
+            const tr = document.createElement("tr");
+
+            for (let i = 0; i <= 4; i++) {
+              // CaseID to MaxAbundance
+              const td = document.createElement("td");
+              td.textContent = row.children[i].textContent;
+              tr.appendChild(td);
             }
 
-            userRetentionTime = parseFloat(tableData[0].RetentionTime); // Example
-            updateDynamicText(sampleId, 10, tableData[0].MaxAbundance, tableData[0].RetentionTime);
-            updateUserTable();
-            document.getElementById('slider-container').style.display = 'block';
-            document.getElementById('matches-heading').style.display = 'block';
-            filterTable();
+            const diffCell = document.createElement("td");
+            diffCell.textContent = diff.toFixed(3);
+            tr.appendChild(diffCell);
+
+            foundTable.appendChild(tr);
+            matchCount++;
+          }
+        });
+
+        // ✅ Update display
+        document.getElementById("match-count").textContent = matchCount;
+        document.getElementById("variance-display-label").textContent =
+          variance.toFixed(1);
+      }
+
+      function printReport() {
+        const rows = document.querySelectorAll("#results-table tbody tr");
+        if (rows.length === 0) return;
+
+        const date = new Date().toLocaleDateString();
+        const badgeID = "12345";
+
+        let reportHTML = `
+    <html>
+    <head><style>
+      body { font-family: Arial; font-size: 12pt; }
+      h1, h2 { text-align: center; font-size: 14pt; font-weight: bold; }
+      .subhead { font-size: 12pt; font-weight: bold; text-align: left; margin-top: 10px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12pt; text-align: center; }
+      th, td { border: 1px solid #000; padding: 5px; }
+    </style></head>
+    <body>
+  <div style="border: 2px solid black; padding: 30px;">
+
+    <h1>DUBAI POLICE</h1>
+    <h1>Forensic Mass Spectrum Analysis</h1>
+    <div class="subhead">Date: ${date}</div>
+    <div class="subhead">Badge ID: ${badgeID}</div>
+    <div class="subhead" style="margin-top: 20px;">Comments:</div>
+    <br> <br>
+    <div style="margin-left: 10px;">The following new samples were successfully identified:</div>
+    <br>
+
+    <table>
+      <tr>
+        <th>Case ID</th>
+        <th>Sample ID</th>
+        <th>Drug Type</th>
+        <th>Retention Time</th>
+        <th>Maximum Abundance</th>
+        <th>Spectrum Match %</th>
+      </tr>`;
+
+        rows.forEach((row) => {
+          const cells = row.querySelectorAll("td");
+          reportHTML += `<tr>${[...cells]
+            .map((td) => `<td>${td.textContent}</td>`)
+            .join("")}</tr>`;
+        });
+
+        reportHTML += `
+      </table>
+      <div style="margin-top: 80px; text-align: center;">
+        _________________________________________<br>
+        Signature
+      </div>
+      </div>
+    </body></html>`;
+
+        const blob = new Blob(["\ufeff", reportHTML], {
+          type: "application/msword",
+        });
+
+        saveAs(blob, `Forensic_Report_${date.replace(/\//g, "-")}.doc`);
+      }
+
+      let currentMode = "info";
+
+      let latestSampleID = null;
+
+      document.querySelectorAll(".mode-pill").forEach((pill) => {
+        pill.addEventListener("click", () => {
+          document
+            .querySelectorAll(".mode-pill")
+            .forEach((p) => p.classList.remove("active"));
+          pill.classList.add("active");
+          currentMode = pill.dataset.mode;
+          updateModeView();
+        });
+      });
+
+      function updateModeView() {
+        document.getElementById("chart-mode-container").style.display =
+          currentMode === "spectrum" ? "flex" : "none";
+        document.getElementById("info-mode-container").style.display =
+          currentMode === "info" ? "block" : "none";
+        document.getElementById("peaks-mode-container").style.display =
+          currentMode === "peaks" ? "block" : "none";
+
+        if (currentMode === "peaks" && latestSampleID) {
+          updatePeaksView(latestSampleID);
         }
+      }
 
-        function updateDynamicText(sampleId, rowCount, maxAbundance, retentionTime) {
-            const dynamicTextContainer = document.getElementById('dynamic-text-container');
-            dynamicTextContainer.innerHTML = `
-                Sample <span class="highlight">${sampleId}</span> contained <span class="highlight">4676 rows</span> of data,
-                from which a maximum abundance of <span class="highlight">${maxAbundance}</span> was retrieved,
-                this is the total intensity of a detected substance in forensics drug testing. 
-                A retention time of <span class="highlight">${retentionTime.toFixed(3)}</span> was found,
-                which is the time it takes for a compound to travel through the chromatography column.
-            `;
-            dynamicTextContainer.style.display = 'block';
-        }
+      document
+        .querySelector("#results-table tbody")
+        .addEventListener("click", (e) => {
+          const row = e.target.closest("tr");
+          if (!row) return;
+          const sampleID = row.children[1].textContent;
+          updateSampleChart(sampleID); // 🔁 this triggers both chart and info view update
+        });
 
-        function updateUserTable() {
-            const tbody = document.getElementById('user-table-body');
-            tbody.innerHTML = `
-                <tr>
-                    <td>S21</td>
-                    <td>${tableData[0].ID}</td>
-                    <td>${tableData[0].RetentionTime}</td>
-                    <td>${tableData[0].MaxAbundance}</td>
-                </tr>
-            `;
-            document.getElementById('user-table-container').style.display = 'block';
-        }
+      let peaksChart = null;
 
-        function updateVarianceLabel() {
-            const slider = document.getElementById('allowed-variance');
-            document.getElementById('variance-value').innerText = slider.value;
-        }
+      function updatePeaksView(sampleID) {
+        const chromData = chromFiles[sampleID];
+        const lines = chromData.trim().split("\n").slice(3); // skip headers
 
-        function filterTable() {
-            const variance = parseFloat(document.getElementById('allowed-variance').value);
-            const tbody = document.getElementById('result-body');
-            const table = document.getElementById('result-table');
+        const data = lines.map((line) => {
+          const [rt, ab] = line.trim().split(/[,\t ]+/);
+          return { rt: parseFloat(rt), ab: parseFloat(ab) };
+        });
 
-            tbody.innerHTML = '';
-            const filteredData = tableData.filter(row =>
-                row.ID === selectedDrugType &&
-                Math.abs(row.RetentionTime - userRetentionTime) <= variance
+        const peaks = [];
+        let i = 0;
+        const minConsecutive = 3; // At least 3 increasing points
+        const minFactor = 1.3;
+
+        while (i < data.length - minConsecutive) {
+          let increasing = true;
+          let startIdx = i;
+          let count = 1;
+
+          // Check for increasing points
+          while (
+            i + 1 < data.length &&
+            data[i + 1].ab > data[i].ab * minFactor
+          ) {
+            i++;
+            count++;
+          }
+
+          if (count >= minConsecutive) {
+            const peakSegment = data.slice(startIdx, i + 1);
+            const peakPoint = peakSegment.reduce((max, p) =>
+              p.ab > max.ab ? p : max
             );
 
-            document.getElementById('matches-count').innerText = filteredData.length;
+            peaks.push({ rt: peakPoint.rt, ab: peakPoint.ab });
+          }
 
-            filteredData.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${row.SampleID}</td>
-                    <td>${row.DateAcquired}</td>
-                    <td>${row.ID}</td>
-                    <td>${row.RetentionTime}</td>
-                    <td>${row.MaxAbundance}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            table.style.display = filteredData.length ? 'table' : 'none';
+          i++; // Move to next point
         }
+
+        // Update the peaks table
+        const tbody = document.querySelector("#peaks-table tbody");
+        tbody.innerHTML = "";
+
+        peaks.forEach((peak, idx) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${idx + 1}</td><td>${peak.ab}</td><td>${
+            peak.rt
+          }</td>`;
+
+          tr.addEventListener("click", () => {
+            centerPeakOnChart(peak.rt, peak.ab); // ✅ Corrected
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        // Now Plot All Points in Peaks Chart
+        const labels = data.map((d) => d.rt); // Use numbers not strings
+
+        const values = data.map((d) => d.ab);
+
+        if (peaksChart) {
+          peaksChart.destroy();
+
+          const peaksCanvas = document.getElementById("peaksChart");
+
+          // Clear canvas content
+          peaksCanvas
+            .getContext("2d")
+            .clearRect(0, 0, peaksCanvas.width, peaksCanvas.height);
+
+          // Reset width & height
+          peaksCanvas.width = peaksCanvas.offsetWidth;
+          peaksCanvas.height = 400; // or whatever fixed height looks good
+        }
+
+        peaksChart = new Chart(
+          document.getElementById("peaksChart").getContext("2d"),
+          {
+            type: "line", // ✅ Change to line
+            data: {
+              datasets: [
+                {
+                  label: "Abundance",
+                  data: data.map((d) => ({ x: d.rt, y: d.ab })), // ✅ Key Change
+                  borderColor: "rgba(0,123,255,1)",
+                  backgroundColor: "rgba(0,123,255,0.6)",
+                  pointRadius: 2, // small dots
+                  fill: false,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    label: function (context) {
+                      const rt = context.raw.x;
+                      const ab = context.raw.y;
+                      return `RT: ${rt.toFixed(
+                        3
+                      )}, Abundance: ${ab.toLocaleString()}`;
+                    },
+                  },
+                },
+              },
+              scales: {
+                x: {
+                  type: "linear",
+                  title: { display: true, text: "Retention Time" },
+                  min: 0,
+                  max: Math.max(...labels), // 👈 or whatever fits your typical RT range
+                },
+                y: {
+                  title: { display: true, text: "Abundance" },
+                  min: 0,
+                  max: Math.max(...values) * 1.2, // 👈 Adjust this based on your expected abundance values
+                },
+              },
+            },
+          }
+        );
+      }
+
+      document
+        .getElementById("peaks-dropdown")
+        .addEventListener("change", () => {
+          if (latestSampleID) updatePeaksView(latestSampleID);
+        });
+
+      function highlightPeak(rt, ab) {
+        const index = peaksChart._highlightLabels.findIndex(
+          (label) => parseFloat(label) === parseFloat(rt.toFixed(3))
+        );
+        if (index !== -1) {
+          const newColors = [...peaksChart._highlightColors].fill(
+            "rgba(0, 123, 255, 0.6)"
+          );
+          newColors[index] = "red";
+          peaksChart.data.datasets[0].backgroundColor = newColors;
+          peaksChart.update();
+          peaksChart.resize();
+        }
+      }
+
+      // Add event listener to case filter dropdown
+      document
+        .getElementById("case-filter")
+        .addEventListener("change", filterSamplesTable);
+
+      function detectPeaksAndUpdateTable(data) {
+        const peaks = [];
+        let currentPeak = [];
+
+        for (let i = 1; i < data.length; i++) {
+          if (data[i].ab >= data[i - 1].ab) {
+            currentPeak.push(data[i]);
+          } else if (currentPeak.length > 0) {
+            // Peak ended, find max in currentPeak
+            const maxPoint = currentPeak.reduce(
+              (max, point) => (point.ab > max.ab ? point : max),
+              currentPeak[0]
+            );
+
+            peaks.push(maxPoint);
+            currentPeak = [];
+          }
+        }
+
+        // Handle if peak ends at the end
+        if (currentPeak.length > 0) {
+          const maxPoint = currentPeak.reduce(
+            (max, point) => (point.ab > max.ab ? point : max),
+            currentPeak[0]
+          );
+          peaks.push(maxPoint);
+        }
+
+        updatePeaksTable(peaks);
+      }
+
+      function updatePeaksTable(peaks) {
+        const peakTableDiv = document.getElementById("auto-peaks-table");
+        peakTableDiv.innerHTML = `
+    <h3>Detected Peaks</h3>
+    <table style="width:100%; border-collapse:collapse; border:1px solid #ccc">
+      <thead>
+        <tr>
+          <th>Peak #</th>
+          <th>Abundance</th>
+          <th>Retention Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${peaks
+          .map(
+            (peak, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${peak.ab}</td>
+            <td>${peak.rt.toFixed(3)}</td>
+          </tr>
+        `
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+      }
+
+      function centerPeakOnChart(rt, ab) {
+        const padding = 2; // Zoom level — how much left & right to show
+
+        peaksChart.options.scales.x.min = rt - padding;
+        peaksChart.options.scales.x.max = rt + padding;
+
+        peaksChart.options.scales.y.min = 0;
+        peaksChart.options.scales.y.max = ab * 1.2; // So peak is nicely visible
+
+        peaksChart.update();
+        peaksChart.resize();
+      }
+
+      function updateSummaryText() {
+        const fileCount = document.querySelectorAll(
+          "#results-table tbody tr"
+        ).length;
+        const numSamples = fileCount;
+
+        let totalRows = 0;
+        Object.values(chromFiles).forEach((chromText) => {
+          totalRows += chromText.trim().split("\n").length - 3;
+        });
+
+        const estTime = 15 * numSamples;
+
+        document.getElementById("summary-text").innerHTML = `
+    Submitted: <span style="color:darkgreen">${numSamples}</span> samples containing 
+    <span style="color:darkgreen">${totalRows} rows</span><br><br>
+    Manual processing time: <br><span style="color:darkgreen">${estTime} mins</span><br><br>
+    SAS estimated processing time: <br><span style="color:darkgreen">8 minutes</span>
+  `;
+      }
+
+      function analyzeSamples() {
+        // Show the right container
+        document.querySelector(".result-area").style.display = "block";
+
+        // Show the Processing message
+        document.getElementById("processing-msg").style.display = "block";
+
+        // Hide the results table initially
+        document.getElementById("results-table").style.display = "none";
+
+        // After 10 seconds, hide Processing message and show the table
+        setTimeout(() => {
+          document.getElementById("processing-msg").style.display = "none";
+          document.getElementById("results-table").style.display = "table";
+        }, 10000); // 10 seconds
+      }
+
+      const translations = {
+        en: {
+          submitTitle: "Submit New Samples",
+          upload1: "Upload 1 sample",
+          uploadBatch: "Upload in batch",
+          enterCaseID: "Enter Case ID:",
+          analyze: "Analyze",
+          save: "Save Samples",
+          print: "Print Report",
+          results: "Results",
+          caseID: "Case ID",
+          sampleID: "Sample ID",
+          drugType: "Drug Type",
+          retentionTime: "Retention Time",
+          maxAbundance: "Maximum Abundance",
+          spectrumSimilarity: "Spectrum Similarity %",
+          totalSamples: "Total Samples",
+          filterByCase: "Filter by Case ID:",
+          foundMatches: "Found Matches",
+          allowedVariance: "Allowed Variance:",
+          foundWithin: "Found Matches within ±",
+          drugSampleMatching: "Drug Sample Matching",
+          explore:
+            "Explore the matching samples with close retention times to the selected sample.",
+          info: "Info",
+          spectrum: "Compare Spectrum",
+          peaks: "View Peaks",
+          submitted: "Submitted:",
+          samplesContaining: "samples containing",
+          manualTime: "Manual processing time:",
+          sasTime: "SAS estimated processing time:",
+          sampleSpectrum: "Sample Spectrum",
+          spectrumSimilarity: "Spectrum Similarity %",
+          peak: "Peak",
+          abundance: "Abundance",
+          retentionTime: "Retention Time",
+          totalSamples: "Total Samples",
+          allSamples: "All Samples",
+          submissionTime: "Submission Time",
+
+          infoText: (sampleID, rows, abundance, rt) =>
+            `Sample <strong>${sampleID}</strong> contained <strong>${rows}</strong> rows of data, from which a maximum abundance of <strong>${abundance}</strong> was retrieved, this is the total intensity of a detected substance in forensic drug testing. A retention time of <strong>${rt}</strong> was found, which is the time it takes for a compound to travel through the chromatography column.`,
+
+          submit: "Submit",
+          spectrumReference: "Cocaine Spectrum Reference",
+          exploreMatches:
+            "Explore the matching samples with close retention times to the selected sample. By adjusting the slider, the samples with a difference in retention time within the allowed variance (±) will be filtered and displayed.",
+          submissionTime: "Submission Time",
+          difference: "Difference",
+          aiTime: "AI Optimized Completion Time",
+        },
+
+        ar: {
+          submitTitle: "إرسال عينات جديدة",
+          upload1: "تحميل عينة واحدة",
+          uploadBatch: "تحميل دفعة",
+          enterCaseID: "أدخل معرف الحالة:",
+          analyze: "تحليل",
+          save: "حفظ العينات",
+          print: "طباعة التقرير",
+          results: "النتائج",
+          caseID: "معرف الحالة",
+          sampleID: "معرف العينة",
+          drugType: "نوع الدواء",
+          retentionTime: "وقت الاحتجاز",
+          maxAbundance: "أقصى وفرة",
+          spectrumSimilarity: "تشابه الطيف %",
+          allSamples: "جميع العينات",
+          totalSamples: "إجمالي العينات",
+          filterByCase: "تصفية حسب معرف الحالة:",
+          foundMatches: "العينات المتطابقة",
+          allowedVariance: "التفاوت المسموح:",
+          foundWithin: "العينات المتطابقة ضمن ±",
+          drugSampleMatching: "مطابقة عينات الدواء",
+          explore:
+            "استكشف العينات المتطابقة مع أوقات الاحتجاز القريبة من العينة المحددة.",
+          info: "معلومات",
+          spectrum: "مقارنة الطيف",
+          peaks: "عرض القمم",
+          submitted: "تم إرسال:",
+          samplesContaining: "عينة تحتوي على",
+          manualTime: "الوقت المطلوب يدوياً:",
+          sasTime: "الوقت المتوقع باستخدام SAS:",
+          sampleSpectrum: "طيف العينة",
+          spectrumSimilarity: "تشابه الطيف %",
+          peak: "الذروة",
+          abundance: "الوفرة",
+          retentionTime: "وقت الاحتجاز",
+          totalSamples: "إجمالي العينات",
+          submissionTime: "وقت الإرسال",
+          infoText: (sampleID, rows, abundance, rt) =>
+            `العينة <strong>${sampleID}</strong> تحتوي على <strong>${rows}</strong> صفوف من البيانات، تم استخراج أقصى وفرة قدرها <strong>${abundance}</strong> وهي تمثل شدة المادة المكتشفة في اختبار المخدرات الجنائي. وتم العثور على وقت احتجاز قدره <strong>${rt}</strong> وهو الوقت المستغرق لمرور المركب خلال عمود الكروماتوغرافيا.`,
+
+          submit: "إرسال",
+          spectrumReference: "المرجع الطيفي للكوكايين",
+          exploreMatches:
+            "استكشف العينات المتطابقة مع أوقات الاحتجاز القريبة من العينة المحددة. من خلال ضبط شريط التمرير، سيتم تصفية وعرض العينات ذات الفارق في وقت الاحتجاز ضمن التفاوت المسموح به (±).",
+          submissionTime: "وقت الإرسال",
+
+          foundMatches: "العينات المتطابقة",
+          difference: "الفرق",
+          aiTime: "الوقت المحسن للإنجاز باستخدام الذكاء الاصطناعي",
+        },
+      };
+
+      function updateSummaryText() {
+        const fileCount = document.querySelectorAll(
+          "#results-table tbody tr"
+        ).length;
+        const numSamples = fileCount;
+
+        let totalRows = 0;
+        Object.values(chromFiles).forEach((chromText) => {
+          totalRows += chromText.trim().split("\n").length - 3;
+        });
+
+        const estTime = 15 * numSamples;
+        const t = translations[currentLang];
+
+        document.getElementById("summary-text").innerHTML = `
+  ${t.submitted} <span style="color:darkgreen">${numSamples}</span> ${t.samplesContaining} 
+  <span style="color:darkgreen">${totalRows}</span><br><br>
+  ${t.manualTime}<br><span style="color:darkgreen">${estTime} mins</span><br><br>
+  ${t.aiTime}<br><span style="color:darkgreen">8 minutes</span>
+`;
+      }
+
+      let currentLang = "en";
+
+      function toggleLanguage() {
+        currentLang = currentLang === "en" ? "ar" : "en";
+        const t = translations[currentLang];
+
+        document.querySelector("h1").textContent = t.submitTitle;
+        document.querySelectorAll(".sidebar strong")[0].textContent = t.upload1;
+        document.querySelectorAll(".sidebar strong")[1].textContent =
+          t.uploadBatch;
+        document.querySelectorAll(".sidebar strong")[2].textContent =
+          t.enterCaseID;
+
+        document.getElementById("analyze-button").textContent = t.analyze;
+        document.getElementById("save-button").textContent = t.save;
+        document.getElementById("print-button").textContent = t.print;
+
+        document.querySelector(".result-area h3").textContent = t.results;
+
+        const ths = document.querySelectorAll("#results-table th");
+        ths[0].textContent = t.caseID;
+        ths[1].textContent = t.sampleID;
+        ths[2].textContent = t.drugType;
+        ths[3].textContent = t.retentionTime;
+        ths[4].textContent = t.maxAbundance;
+        ths[5].textContent = t.spectrumSimilarity;
+
+        document.querySelector("h3").textContent = t.allSamples;
+        document.querySelector(
+          "#case-filter"
+        ).previousElementSibling.innerHTML = `<strong>${t.filterByCase}</strong>`;
+
+        document.querySelector(".matching-section h3").textContent =
+          t.allSamples;
+        document.querySelectorAll("h1")[1].textContent = t.allSamples;
+        document.querySelectorAll("h1")[2].textContent = t.drugSampleMatching;
+        document.querySelectorAll("h4")[0].textContent = t.explore;
+
+        document.getElementById(
+          "variance-display-label"
+        ).previousSibling.textContent = t.allowedVariance + " ";
+
+        document.querySelectorAll(".matching-section h3")[1].textContent =
+          t.foundMatches;
+      }
+
+      function setLanguage(lang) {
+        currentLang = lang;
+        const t = translations[lang];
+
+        // Top Heading
+        document.querySelector("h1").textContent = t.submitTitle;
+
+        // Sidebar
+        document.querySelectorAll(".sidebar strong")[0].textContent = t.upload1;
+        document.querySelectorAll(".sidebar strong")[1].textContent =
+          t.uploadBatch;
+        document.querySelectorAll(".sidebar strong")[2].textContent =
+          t.enterCaseID;
+
+        // Buttons
+        document.getElementById("analyze-button").textContent = t.analyze;
+        document.getElementById("save-button").textContent = t.save;
+        document.getElementById("print-button").textContent = t.print;
+
+        // Results Table Header
+        const ths = document.querySelectorAll("#results-table th");
+        ths[0].textContent = t.caseID;
+        ths[1].textContent = t.sampleID;
+        ths[2].textContent = t.drugType;
+        ths[3].textContent = t.retentionTime;
+        ths[4].textContent = t.maxAbundance;
+        ths[5].textContent = t.spectrumSimilarity;
+
+        // All Samples Section
+        document
+          .querySelector("#all-samples-table")
+          .closest("div").previousElementSibling.textContent = t.allSamples;
+        document.querySelectorAll("h1")[1].textContent = t.allSamples;
+        document.querySelectorAll("h1")[2].textContent = t.drugSampleMatching;
+        document.querySelectorAll(".matching-section h3")[0].textContent =
+          t.allSamples;
+
+        document.querySelector(
+          "#case-filter"
+        ).previousElementSibling.innerHTML = `<strong>${t.filterByCase}</strong>`;
+        document.querySelector("#sample-count").nextElementSibling.textContent =
+          t.totalSamples;
+
+        // Compare Spectrum Section
+        document.querySelectorAll("h4")[0].textContent =
+          "Cocaine Spectrum Reference";
+        document.querySelectorAll("h4")[1].textContent = t.sampleSpectrum;
+
+        if (document.getElementById("match-info").innerHTML.trim() !== "") {
+          const currentText = document.getElementById("match-info").innerHTML;
+          const percent = currentText.match(/(\d+(\.\d+)?)/g)?.[0] || "0";
+          document.getElementById(
+            "match-info"
+          ).innerHTML = `${t.spectrumSimilarity}: ${percent}%`;
+        }
+
+        // Peaks Table Header
+        const peaksTableHeaders = document.querySelectorAll("#peaks-table th");
+        peaksTableHeaders[0].textContent = t.peak;
+        peaksTableHeaders[1].textContent = t.abundance;
+        peaksTableHeaders[2].textContent = t.retentionTime;
+
+        // Allowed Variance Label
+        document.getElementById(
+          "variance-display-label"
+        ).previousSibling.textContent = t.allowedVariance + " ";
+
+        // Mode Toggle Pills
+        const modePills = document.querySelectorAll(".mode-pill");
+        modePills[0].textContent = t.info;
+        modePills[1].textContent = t.spectrum;
+        modePills[2].textContent = t.peaks;
+
+        // Update Submit Button
+        document.querySelector(
+          "button[onclick='validateUploads()']"
+        ).textContent = t.submit;
+
+        // Update Compare Spectrum Headings
+        document.querySelectorAll("h4")[0].textContent = t.spectrumReference;
+        document.querySelectorAll("h4")[1].textContent = t.sampleSpectrum;
+
+        // Update Spectrum Similarity % if sample is selected
+        if (document.getElementById("match-info").innerHTML.trim() !== "") {
+          const currentText = document.getElementById("match-info").innerHTML;
+          const percent = currentText.match(/(\d+(\.\d+)?)/g)?.[0] || "0";
+          document.getElementById(
+            "match-info"
+          ).innerHTML = `${t.spectrumSimilarity}: ${percent}%`;
+        }
+
+        // Update Explore Paragraph in Last Section
+        document.querySelectorAll("h4")[2].textContent = t.exploreMatches;
+
+        // Update All Samples Table Headers
+        const allSamplesHeaders = document.querySelectorAll(
+          "#all-samples-table th"
+        );
+        allSamplesHeaders[0].textContent = t.caseID;
+        allSamplesHeaders[1].textContent = t.sampleID;
+        allSamplesHeaders[2].textContent = t.drugType;
+        allSamplesHeaders[3].textContent = t.retentionTime;
+        allSamplesHeaders[4].textContent = t.maxAbundance;
+        allSamplesHeaders[5].textContent = t.submissionTime;
+
+        // Update All Samples Table Headers
+        const allSamplesHeaders2 = document.querySelectorAll(
+          "#all-samples-table2 th"
+        );
+        allSamplesHeaders2[0].textContent = t.caseID;
+        allSamplesHeaders2[1].textContent = t.sampleID;
+        allSamplesHeaders2[2].textContent = t.drugType;
+        allSamplesHeaders2[3].textContent = t.retentionTime;
+        allSamplesHeaders2[4].textContent = t.maxAbundance;
+
+        document
+          .querySelector("#found-matches-table")
+          .closest("div").previousElementSibling.textContent = t.foundMatches;
+
+        const foundHeaders = document.querySelectorAll(
+          "#found-matches-table th"
+        );
+        foundHeaders[0].textContent = t.sampleID;
+        foundHeaders[1].textContent = t.drugType;
+        foundHeaders[2].textContent = t.retentionTime;
+        foundHeaders[3].textContent = t.maxAbundance;
+        foundHeaders[4].textContent = t.submissionTime;
+        foundHeaders[5].textContent = t.difference;
+
+        document.querySelectorAll("h1")[1].textContent = t.allSamples;
+        document.querySelectorAll(".matching-section h3")[0].textContent =
+          t.allSamples;
+
+        document
+          .querySelector("#all-samples-table")
+          .closest("div").previousElementSibling.textContent = t.allSamples;
+
+        document.getElementById("all-samples-header-1").textContent =
+          t.allSamples;
+        document.getElementById("all-samples-header-2").textContent =
+          t.allSamples;
+
+        // Update Summary Container
+        updateSummaryText();
+
+        // Update Toggle Styling
+        updateLanguageToggleUI();
+      }
+
+      function updateLanguageToggleUI() {
+        if (currentLang === "en") {
+          document.getElementById("en-btn").style.backgroundColor = "#018657";
+          document.getElementById("en-btn").style.color = "white";
+          document.getElementById("ar-btn").style.backgroundColor = "#eee";
+          document.getElementById("ar-btn").style.color = "black";
+        } else {
+          document.getElementById("ar-btn").style.backgroundColor = "#018657";
+          document.getElementById("ar-btn").style.color = "white";
+          document.getElementById("en-btn").style.backgroundColor = "#eee";
+          document.getElementById("en-btn").style.color = "black";
+        }
+      }
     </script>
-</body>
+  </body>
 </html>
